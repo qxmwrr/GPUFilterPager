@@ -1,6 +1,7 @@
 # GPUFilterPager
 基于GPUImage滤镜的滤镜滑动切换控件
 
+![img](http://7fvdti.com1.z0.glb.clouddn.com/2017-06-16%2017_13_38.gif)
 
 ## License
     Copyright(c) 2017 Mrq
