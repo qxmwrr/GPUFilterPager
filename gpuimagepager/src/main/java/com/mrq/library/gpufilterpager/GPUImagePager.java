@@ -53,6 +53,7 @@ public class GPUImagePager implements View.OnTouchListener {
 
     private int mCurItem;
     private List<ItemInfo> mItems = new ArrayList<>();
+    private boolean mFirstLayout = true;
 
     public GPUImagePager(final GLSurfaceView glSurfaceView) {
         if (!supportsOpenGLES2(glSurfaceView.getContext())) {
@@ -71,6 +72,15 @@ public class GPUImagePager implements View.OnTouchListener {
         mRenderer = new GPUImageRenderer();
         setGLSurfaceView(glSurfaceView);
         glSurfaceView.setOnTouchListener(this);
+        glSurfaceView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+            @Override
+            public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
+                if (mFirstLayout){
+                    mFirstLayout = false;
+                    scrollTo(0);
+                }
+            }
+        });
     }
 
     /**
@@ -139,7 +149,11 @@ public class GPUImagePager implements View.OnTouchListener {
             }
         }
         populate();
-        requestRender();
+        if (getClientWidth() == 0){
+            mFirstLayout = true;
+        } else {
+            scrollTo(0);
+        }
     }
 
     //--------------------vp-------------------
@@ -565,9 +579,9 @@ public class GPUImagePager implements View.OnTouchListener {
             if (DEBUG) Log.i(TAG, "populate is pending, skipping for now...");
             return;
         }
-        if (mGlSurfaceView.getWindowToken() == null) {
-            return;
-        }
+//        if (mGlSurfaceView.getWindowToken() == null) {
+//            return;
+//        }
 
         ItemInfo curItem = mItems.get(mCurItem);
         if (curItem != null) {

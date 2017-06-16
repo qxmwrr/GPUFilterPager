@@ -72,7 +72,7 @@ public class GPUImageRenderer implements GLSurfaceView.Renderer, Camera.PreviewC
     private float mBackgroundGreen = 0;
     private float mBackgroundBlue = 0;
 
-    private int mScrollX = 540;
+    private int mScrollX = 0;
 
     public GPUImageRenderer() {
         mFilter = new GPUImageFilter();
