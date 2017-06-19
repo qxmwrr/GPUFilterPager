@@ -29,8 +29,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
-import jp.co.cyberagent.android.gpuimage.GPUImageFilter;
-
 /**
  *
  * Created by mrq on 2017/6/9.
@@ -55,7 +53,7 @@ public class GPUImagePager implements View.OnTouchListener {
     private List<ItemInfo> mItems = new ArrayList<>();
     private boolean mFirstLayout = true;
 
-    public GPUImagePager(final GLSurfaceView glSurfaceView) {
+    public GPUImagePager(final GLSurfaceView glSurfaceView, DefaultFilterFactory filterFactory) {
         if (!supportsOpenGLES2(glSurfaceView.getContext())) {
             throw new IllegalStateException("OpenGL ES 2.0 is not supported on this phone.");
         }
@@ -69,7 +67,7 @@ public class GPUImagePager implements View.OnTouchListener {
 
         mScroller = new Scroller(mContext, sInterpolator);
 
-        mRenderer = new GPUImageRenderer();
+        mRenderer = new GPUImageRenderer(filterFactory);
         setGLSurfaceView(glSurfaceView);
         glSurfaceView.setOnTouchListener(this);
         glSurfaceView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
@@ -142,7 +140,7 @@ public class GPUImagePager implements View.OnTouchListener {
         requestRender();
     }
     
-    public void setFilterList(List<GPUImageFilter> filterList) {
+    public void setFilterList(List<Filter> filterList) {
         mItems.clear();
         for (int i = 0; i < filterList.size(); i++) {
             ItemInfo itemInfo = new ItemInfo();
@@ -601,9 +599,9 @@ public class GPUImagePager implements View.OnTouchListener {
             if (DEBUG) Log.d(TAG, "populate " + mCurItem);
             mCurrentItemOffsetPixel = curItem.offset * getClientWidth();
 
-            GPUImageFilter left = null;
-            GPUImageFilter cur = mItems.get(mCurItem).filter;
-            GPUImageFilter right = null;
+            Filter left = null;
+            Filter cur = mItems.get(mCurItem).filter;
+            Filter right = null;
             int leftIndex = mCurItem - 1;
             int rightIndex = mCurItem + 1;
 
@@ -643,7 +641,7 @@ public class GPUImagePager implements View.OnTouchListener {
     }
 
     private static class ItemInfo {
-        GPUImageFilter filter;
+        Filter filter;
         int position;
         boolean scrolling;
         float widthFactor;

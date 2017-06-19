@@ -6,10 +6,13 @@ import android.opengl.GLSurfaceView;
 import android.os.Bundle;
 import android.view.View;
 
+import com.mrq.library.gpufilterpager.DefaultFilterFactory;
+import com.mrq.library.gpufilterpager.Filter;
 import com.mrq.library.gpufilterpager.GPUImagePager;
 import com.mrq.library.gpufilterpager.ScaleType;
 
 import java.io.IOException;
+import java.nio.FloatBuffer;
 import java.util.ArrayList;
 
 import jp.co.cyberagent.android.gpuimage.GPUImageAlphaBlendFilter;
@@ -28,15 +31,20 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
 
         GLSurfaceView glSurfaceView = (GLSurfaceView) findViewById(R.id.gl_surface_view);
-        final GPUImagePager gpuImagePager = new GPUImagePager(glSurfaceView);
-        ArrayList<GPUImageFilter> filters = new ArrayList<>();
-        filters.add(new GPUImageColorInvertFilter());
-        filters.add(new GPUImageHueFilter());
-        filters.add(new GPUImageBrightnessFilter(-0.5f));
-        filters.add(new GPUImageBrightnessFilter(0.5f));
-        filters.add(new GPUImageAlphaBlendFilter());
-        filters.add(new GPUImageGrayscaleFilter());
-        filters.add(new GPUImageContrastFilter(40));
+        final GPUImagePager gpuImagePager = new GPUImagePager(glSurfaceView, new DefaultFilterFactory() {
+            @Override
+            public Filter create() {
+                return new FilterWrapper(new GPUImageFilter());
+            }
+        });
+        ArrayList<Filter> filters = new ArrayList<>();
+        filters.add(new FilterWrapper(new GPUImageColorInvertFilter()));
+        filters.add(new FilterWrapper(new GPUImageHueFilter()));
+        filters.add(new FilterWrapper(new GPUImageBrightnessFilter(-0.5f)));
+        filters.add(new FilterWrapper(new GPUImageBrightnessFilter(0.5f)));
+        filters.add(new FilterWrapper(new GPUImageAlphaBlendFilter()));
+        filters.add(new FilterWrapper(new GPUImageGrayscaleFilter()));
+        filters.add(new FilterWrapper(new GPUImageContrastFilter(40)));
         gpuImagePager.setScaleType(ScaleType.CENTER_CROP);
         gpuImagePager.setFilterList(filters);
         try {
@@ -80,5 +88,34 @@ public class MainActivity extends Activity {
         findViewById(R.id.b5).setOnClickListener(clickListener);
         findViewById(R.id.b6).setOnClickListener(clickListener);
         findViewById(R.id.b7).setOnClickListener(clickListener);
+    }
+
+    private class FilterWrapper implements Filter{
+
+        GPUImageFilter filter;
+
+        public FilterWrapper(GPUImageFilter filter) {
+            this.filter = filter;
+        }
+
+        @Override
+        public void init() {
+            filter.init();
+        }
+
+        @Override
+        public void onOutputSizeChanged(int width, int height) {
+            filter.onOutputSizeChanged(width, height);
+        }
+
+        @Override
+        public void onDraw(int textureId, FloatBuffer cubeBuffer, FloatBuffer textureBuffer) {
+            filter.onDraw(textureId, cubeBuffer, textureBuffer);
+        }
+
+        @Override
+        public void destroy() {
+            filter.destroy();
+        }
     }
 }

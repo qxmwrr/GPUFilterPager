@@ -17,7 +17,6 @@ import java.util.Queue;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
-import jp.co.cyberagent.android.gpuimage.GPUImageFilter;
 import jp.co.cyberagent.android.gpuimage.OpenGlUtils;
 import jp.co.cyberagent.android.gpuimage.Rotation;
 import jp.co.cyberagent.android.gpuimage.util.TextureRotationUtil;
@@ -36,10 +35,10 @@ public class GPUImageRenderer implements GLSurfaceView.Renderer, Camera.PreviewC
 
     public final Object mSurfaceChangedWaiter = new Object();
 
-    private GPUImageFilter mFilter;
-    private GPUImageFilter mLeftFilter;
-    private GPUImageFilter mCurFilter;
-    private GPUImageFilter mRightFilter;
+    private Filter mFilter;
+    private Filter mLeftFilter;
+    private Filter mCurFilter;
+    private Filter mRightFilter;
 
     private boolean mDragToLeft;
 
@@ -74,11 +73,11 @@ public class GPUImageRenderer implements GLSurfaceView.Renderer, Camera.PreviewC
 
     private int mScrollX = 0;
 
-    public GPUImageRenderer() {
-        mFilter = new GPUImageFilter();
-        mLeftFilter = new GPUImageFilter();
-        mCurFilter = new GPUImageFilter();
-        mRightFilter = new GPUImageFilter();
+    public GPUImageRenderer(DefaultFilterFactory filterFactory) {
+        mFilter = filterFactory.create();
+        mLeftFilter = filterFactory.create();
+        mCurFilter = filterFactory.create();
+        mRightFilter = filterFactory.create();
 
         mRunOnDraw = new LinkedList<Runnable>();
         mRunOnDrawEnd = new LinkedList<Runnable>();
@@ -134,16 +133,15 @@ public class GPUImageRenderer implements GLSurfaceView.Renderer, Camera.PreviewC
 
     private int[] mFrameBuffers;
     private int[] mFrameBufferTextures;
-    private int mFBOTexture;
 
     @Override
     public void onSurfaceChanged(GL10 gl, int width, int height) {
         mOutputWidth = width;
         mOutputHeight = height;
 
-        if (mFrameBuffers != null) {
-
-        }
+//        if (mFrameBuffers != null) {
+//
+//        }
         mFilter.onOutputSizeChanged(width, height);
         GLES20.glViewport(0, 0, width, height);
         adjustImageScaling();
@@ -235,13 +233,13 @@ public class GPUImageRenderer implements GLSurfaceView.Renderer, Camera.PreviewC
         adjustImageScaling();
     }
 
-    public void setFilter(final GPUImageFilter leftFilter, final GPUImageFilter curFilter, final GPUImageFilter rightFilter) {
+    public void setFilter(final Filter leftFilter, final Filter curFilter, final Filter rightFilter) {
         runOnDraw(new Runnable() {
             @Override
             public void run() {
-                final GPUImageFilter oldLeftFilter = mLeftFilter;
-                final GPUImageFilter oldCurFilter = mCurFilter;
-                final GPUImageFilter oldRightFilter = mRightFilter;
+                final Filter oldLeftFilter = mLeftFilter;
+                final Filter oldCurFilter = mCurFilter;
+                final Filter oldRightFilter = mRightFilter;
                 mLeftFilter = leftFilter;
                 mCurFilter = curFilter;
                 mRightFilter = rightFilter;
@@ -296,9 +294,6 @@ public class GPUImageRenderer implements GLSurfaceView.Renderer, Camera.PreviewC
                     Canvas can = new Canvas(resizedBitmap);
                     can.drawARGB(0x00, 0x00, 0x00, 0x00);
                     can.drawBitmap(bitmap, 0, 0, null);
-//                    mAddedPadding = 1;
-                } else {
-//                    mAddedPadding = 0;
                 }
 
                 mGLTextureId = OpenGlUtils.loadTexture(
