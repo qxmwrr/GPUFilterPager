@@ -7,8 +7,8 @@ android {
         applicationId "com.mrq.gpufilterpager"
         minSdkVersion 15
         targetSdkVersion 25
-        versionCode 1
-        versionName "0.1"
+        versionCode 4
+        versionName "0.2"
     }
     buildTypes {
         release {
