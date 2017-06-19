@@ -83,6 +83,15 @@ public class GPUImagePager implements View.OnTouchListener {
         });
     }
 
+    public void setCurrentItem(int item) {
+        setCurrentItem(item, false);
+    }
+
+    public void setCurrentItem(int item, boolean smoothScroll) {
+        populate(item);
+        setCurrentItemInternal(item, smoothScroll, 0);
+    }
+
     /**
      * Sets the background color
      */
@@ -290,7 +299,7 @@ public class GPUImagePager implements View.OnTouchListener {
                     final int totalDelta = (int) (x - mInitialMotionX);
                     int nextPage = determineTargetPage(currentPage, pageOffset, initialVelocity, totalDelta);
                     if (DEBUG) Log.d(TAG, "action up scroll from page " + currentPage + " to page " + nextPage + " with speed " + initialVelocity);
-                    setCurrentItemInternal(nextPage, initialVelocity);
+                    setCurrentItemInternal(nextPage, true, initialVelocity);
 
                     resetTouch();
                 }
@@ -303,7 +312,7 @@ public class GPUImagePager implements View.OnTouchListener {
 //        setCurrentItemInternal(item, smoothScroll, always, 0);
 //    }
 
-    private void setCurrentItemInternal(int item, int velocity) {
+    private void setCurrentItemInternal(int item, boolean smooth, int velocity) {
         if (mItems.size() <= 0) {
             return;
         }
@@ -318,7 +327,11 @@ public class GPUImagePager implements View.OnTouchListener {
         final ItemInfo curInfo = mItems.get(item);
         final int width = getClientWidth();
         int destX = (int) (width * curInfo.offset);
-        smoothScrollTo(destX, velocity);
+        if (smooth) {
+            smoothScrollTo(destX, velocity);
+        } else {
+            scrollTo(destX);
+        }
     }
 
     private void smoothScrollTo(int x, int velocity) {

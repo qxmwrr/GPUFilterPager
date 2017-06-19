@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.graphics.BitmapFactory;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
+import android.view.View;
 
 import com.mrq.library.gpufilterpager.GPUImagePager;
 import com.mrq.library.gpufilterpager.ScaleType;
@@ -27,7 +28,7 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
 
         GLSurfaceView glSurfaceView = (GLSurfaceView) findViewById(R.id.gl_surface_view);
-        GPUImagePager gpuImagePager = new GPUImagePager(glSurfaceView);
+        final GPUImagePager gpuImagePager = new GPUImagePager(glSurfaceView);
         ArrayList<GPUImageFilter> filters = new ArrayList<>();
         filters.add(new GPUImageColorInvertFilter());
         filters.add(new GPUImageHueFilter());
@@ -43,5 +44,41 @@ public class MainActivity extends Activity {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        View.OnClickListener clickListener = new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                switch (v.getId()){
+                    case R.id.b1:
+                        gpuImagePager.setCurrentItem(0);
+                        break;
+                    case R.id.b2:
+                        gpuImagePager.setCurrentItem(1);
+                        break;
+                    case R.id.b3:
+                        gpuImagePager.setCurrentItem(2);
+                        break;
+                    case R.id.b4:
+                        gpuImagePager.setCurrentItem(3);
+                        break;
+                    case R.id.b5:
+                        gpuImagePager.setCurrentItem(4);
+                        break;
+                    case R.id.b6:
+                        gpuImagePager.setCurrentItem(5);
+                        break;
+                    case R.id.b7:
+                        gpuImagePager.setCurrentItem(6);
+                        break;
+                }
+            }
+        };
+        findViewById(R.id.b1).setOnClickListener(clickListener);
+        findViewById(R.id.b2).setOnClickListener(clickListener);
+        findViewById(R.id.b3).setOnClickListener(clickListener);
+        findViewById(R.id.b4).setOnClickListener(clickListener);
+        findViewById(R.id.b5).setOnClickListener(clickListener);
+        findViewById(R.id.b6).setOnClickListener(clickListener);
+        findViewById(R.id.b7).setOnClickListener(clickListener);
     }
 }
