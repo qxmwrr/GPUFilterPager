@@ -21,4 +21,6 @@ android {
 dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
     compile project(':gpuimagepager')
+    compile 'jp.co.cyberagent.android.gpuimage:gpuimage-library:1.4.1'
+
 }

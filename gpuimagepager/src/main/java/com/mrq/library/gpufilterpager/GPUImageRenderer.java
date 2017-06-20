@@ -17,11 +17,7 @@ import java.util.Queue;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
-import jp.co.cyberagent.android.gpuimage.OpenGlUtils;
-import jp.co.cyberagent.android.gpuimage.Rotation;
-import jp.co.cyberagent.android.gpuimage.util.TextureRotationUtil;
-
-import static jp.co.cyberagent.android.gpuimage.util.TextureRotationUtil.TEXTURE_NO_ROTATION;
+import static com.mrq.library.gpufilterpager.TextureRotationUtil.TEXTURE_NO_ROTATION;
 
 /**
  *
@@ -31,7 +27,7 @@ import static jp.co.cyberagent.android.gpuimage.util.TextureRotationUtil.TEXTURE
 public class GPUImageRenderer implements GLSurfaceView.Renderer, Camera.PreviewCallback {
     private static final String TAG = "GPUImagePager";
     private static final boolean DEBUG = true;
-    public static final int NO_IMAGE = -1;
+    public static final int NO_IMAGE = OpenGlUtils.NO_TEXTURE;
 
     public final Object mSurfaceChangedWaiter = new Object();
 
