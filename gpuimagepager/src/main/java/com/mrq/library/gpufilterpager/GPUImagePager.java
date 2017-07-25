@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- *
  * Created by mrq on 2017/6/9.
  */
 
@@ -50,7 +49,7 @@ public class GPUImagePager implements View.OnTouchListener {
 
 
     private int mCurItem;
-    private List<ItemInfo> mItems = new ArrayList<>();
+    private List<Filter> mItems = new ArrayList<>();
     private boolean mFirstLayout = true;
 
     public GPUImagePager(final GLSurfaceView glSurfaceView, DefaultFilterFactory filterFactory) {
@@ -73,7 +72,7 @@ public class GPUImagePager implements View.OnTouchListener {
         glSurfaceView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
             @Override
             public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
-                if (mFirstLayout){
+                if (mFirstLayout) {
                     mFirstLayout = false;
                     scrollTo(0);
                 }
@@ -139,24 +138,14 @@ public class GPUImagePager implements View.OnTouchListener {
         mCurrentBitmap = null;
         requestRender();
     }
-    
+
     public void setFilterList(List<Filter> filterList) {
         mItems.clear();
         for (int i = 0; i < filterList.size(); i++) {
-            ItemInfo itemInfo = new ItemInfo();
-            itemInfo.filter = filterList.get(i);
-            itemInfo.position = i;
-            itemInfo.widthFactor = 1;
-            itemInfo.offset = i;
-            mItems.add(itemInfo);
-            if (i == 0) {
-                mFirstOffset = itemInfo.offset;
-            } else if (i == filterList.size() - 1) {
-                mLastOffset = itemInfo.offset;
-            }
+            mItems.add(filterList.get(i));
         }
         populate();
-        if (getClientWidth() == 0){
+        if (getClientWidth() == 0) {
             mFirstLayout = true;
         } else {
             scrollTo(0);
@@ -166,10 +155,8 @@ public class GPUImagePager implements View.OnTouchListener {
     //--------------------vp-------------------
 
 
-
     private boolean mPopulatePending;
 
-//    private final int mOffscreenPageLimit = 1;
     private Scroller mScroller;
     private boolean mIsScrollStarted;
 
@@ -179,8 +166,6 @@ public class GPUImagePager implements View.OnTouchListener {
             return t * t * t * t * t + 1.0f;
         }
     };
-    private float mFirstOffset = -Float.MAX_VALUE;
-    private float mLastOffset = Float.MAX_VALUE;
 
     private boolean mIsBeingDragged;
 
@@ -240,7 +225,7 @@ public class GPUImagePager implements View.OnTouchListener {
                 mActivePointerId = ev.getPointerId(0);
                 break;
             }
-            case MotionEvent.ACTION_MOVE:{
+            case MotionEvent.ACTION_MOVE: {
                 if (!mIsBeingDragged) {
                     final int pointerIndex = ev.findPointerIndex(mActivePointerId);
                     if (pointerIndex == -1) {
@@ -257,12 +242,10 @@ public class GPUImagePager implements View.OnTouchListener {
                     if (xDiff > mTouchSlop && xDiff > yDiff) {
                         if (DEBUG) Log.v(TAG, "Starting drag!");
                         mIsBeingDragged = true;
-//                        mGlSurfaceView.requestParentDisallowInterceptTouchEvent(true);
                         mLastMotionX = x - mInitialMotionX > 0 ? mInitialMotionX + mTouchSlop :
                                 mInitialMotionX - mTouchSlop;
                         mLastMotionY = y;
                         setScrollState(SCROLL_STATE_DRAGGING);
-//                        setScrollingCacheEnabled(true);
 
                         // Disallow Parent Intercept, just in case
                         ViewParent parent = mGlSurfaceView.getParent();
@@ -275,12 +258,11 @@ public class GPUImagePager implements View.OnTouchListener {
                     // Scroll to follow the motion event
                     final int activePointerIndex = ev.findPointerIndex(mActivePointerId);
                     final float x = ev.getX(activePointerIndex);
-//                    needsInvalidate |= performDrag(x);
                     performDrag(x);
                 }
                 break;
             }
-            case MotionEvent.ACTION_UP:{
+            case MotionEvent.ACTION_UP: {
                 if (mIsBeingDragged) {
                     final VelocityTracker velocityTracker = mVelocityTracker;
                     velocityTracker.computeCurrentVelocity(1000, mMaximumVelocity);
@@ -289,15 +271,18 @@ public class GPUImagePager implements View.OnTouchListener {
                     final int width = getClientWidth();
                     final int scrollX = getScrollX();
 
-                    final ItemInfo ii = infoForCurrentScrollPosition();
-                    final int currentPage = ii.position;
-                    final float pageOffset = (((float) scrollX / width) - ii.offset) / ii.widthFactor;
-                    final int activePointerIndex = ev.findPointerIndex(mActivePointerId);
-                    final float x = ev.getX(activePointerIndex);
-                    final int totalDelta = (int) (x - mInitialMotionX);
-                    int nextPage = determineTargetPage(currentPage, pageOffset, initialVelocity, totalDelta);
-                    if (DEBUG) Log.d(TAG, "action up scroll from page " + currentPage + " to page " + nextPage + " with speed " + initialVelocity);
-                    setCurrentItemInternal(nextPage, true, initialVelocity);
+                    final int position = infoForCurrentScrollPosition();
+                    if (position != -1) {
+                        final int currentPage = position;
+                        final float pageOffset = ((float) scrollX / width) - position;
+                        final int activePointerIndex = ev.findPointerIndex(mActivePointerId);
+                        final float x = ev.getX(activePointerIndex);
+                        final int totalDelta = (int) (x - mInitialMotionX);
+                        int nextPage = determineTargetPage(currentPage, pageOffset, initialVelocity, totalDelta);
+                        if (DEBUG)
+                            Log.d(TAG, "action up scroll from page " + currentPage + " to page " + nextPage + " with speed " + initialVelocity);
+                        setCurrentItemInternal(nextPage, true, initialVelocity);
+                    }
 
                     resetTouch();
                 }
@@ -306,25 +291,21 @@ public class GPUImagePager implements View.OnTouchListener {
 
         return true;
     }
-//    void setCurrentItemInternal(int item, boolean smoothScroll, boolean always) {
-//        setCurrentItemInternal(item, smoothScroll, always, 0);
-//    }
 
-    private void setCurrentItemInternal(int item, boolean smooth, int velocity) {
+    private void setCurrentItemInternal(int position, boolean smooth, int velocity) {
         if (mItems.size() <= 0) {
             return;
         }
 
-        if (item < 0) {
-            item = 0;
-        } else if (item >= mItems.size()) {
-            item = mItems.size() - 1;
+        if (position < 0) {
+            position = 0;
+        } else if (position >= mItems.size()) {
+            position = mItems.size() - 1;
         }
 
-        mCurItem = item;//把将要滑动到的item设置为curItem。
-        final ItemInfo curInfo = mItems.get(item);
+        mCurItem = position;//把将要滑动到的item设置为curItem。
         final int width = getClientWidth();
-        int destX = (int) (width * curInfo.offset);
+        int destX = width * position;//偏移
         if (smooth) {
             smoothScrollTo(destX, velocity);
         } else {
@@ -343,7 +324,6 @@ public class GPUImagePager implements View.OnTouchListener {
         }
         int dx = x - sx;//滑动目的位置-当前位置
         if (dx == 0) {
-//            completeScroll(false);
             populate();
             setScrollState(SCROLL_STATE_IDLE);
             mPopulatePending = false;
@@ -417,7 +397,8 @@ public class GPUImagePager implements View.OnTouchListener {
                 mScroller.abortAnimation();
                 int oldX = getScrollX();
                 int x = mScroller.getCurrX();
-                if (DEBUG) Log.i(TAG, "scroll finish but scroller wasScrolling form " + oldX + " to " + x);
+                if (DEBUG)
+                    Log.i(TAG, "scroll finish but scroller wasScrolling form " + oldX + " to " + x);
                 if (oldX != x) {
                     scrollTo(x);
                 }
@@ -449,61 +430,21 @@ public class GPUImagePager implements View.OnTouchListener {
         }
 
         if (mItems.size() > 0) {
-            final ItemInfo firstItem = mItems.get(0);
-            final ItemInfo lastItem = mItems.get(mItems.size() - 1);
-
             // Only let the user target pages we have items for
-            targetPage = Math.max(firstItem.position, Math.min(targetPage, lastItem.position));
+            targetPage = Math.max(0, Math.min(targetPage, mItems.size() - 1));
         }
 
         return targetPage;
     }
 
-    private ItemInfo infoForCurrentScrollPosition() {
+    private int infoForCurrentScrollPosition() {
         final int width = getClientWidth();
         final float scrollOffset = width > 0 ? (float) getScrollX() / width : 0;
-        int position = getScrollX() / width;
-        if (position >= 0 && position < mItems.size()){
-            return mItems.get(position);
+        int position = (int) scrollOffset;
+        if (position >= 0 && position < mItems.size()) {
+            return position;
         }
-        return null;
-
-//        int lastPos = -1;
-//        float lastOffset = 0.f;
-//        float lastWidth = 0.f;
-//        boolean first = true;
-//
-//        ItemInfo lastItem = null;
-//        for (int i = 0; i < mItems.size(); i++) {
-//            ItemInfo ii = mItems.get(i);
-//            float offset;
-//            if (!first && ii.position != lastPos + 1) {
-//                // Create a synthetic item for a missing page.
-//                ii = mTempItem;
-//                ii.offset = lastOffset + lastWidth;
-//                ii.position = lastPos + 1;
-//                ii.widthFactor = mFilterAdapter.getPageWidth(ii.position);
-//                i--;
-//            }
-//            offset = ii.offset;
-//
-//            final float leftBound = offset;
-//            final float rightBound = offset + ii.widthFactor;
-//            if (first || scrollOffset >= leftBound) {
-//                if (scrollOffset < rightBound || i == mItems.size() - 1) {
-//                    return ii;
-//                }
-//            } else {
-//                return lastItem;
-//            }
-//            first = false;
-//            lastPos = ii.position;
-//            lastOffset = offset;
-//            lastWidth = ii.widthFactor;
-//            lastItem = ii;
-//        }
-//
-//        return lastItem;
+        return -1;
     }
 
     private void resetTouch() {
@@ -528,20 +469,16 @@ public class GPUImagePager implements View.OnTouchListener {
         float scrollX = oldScrollX + deltaX;
         final int width = getClientWidth();
 
-        float leftBound = width * mFirstOffset;
-        float rightBound = width * mLastOffset;
-
-        if (scrollX < leftBound) {
+        if (scrollX < 0) {
             if (DEBUG) Log.d(TAG, "滑到最<<<<<<边");
-        } else if (scrollX > rightBound) {
+        } else if (scrollX > width * (mItems.size() - 1)) {
             if (DEBUG) Log.d(TAG, "滑到最>>>>>>边");
         } else {
             if (DEBUG) Log.d(TAG, "正常滑动<><><>" + scrollX);
             scrollTo((int) scrollX);
         }
         mLastMotionX += scrollX - (int) scrollX;
-
-}
+    }
 
     private int mScrollX = 0;
 
@@ -550,10 +487,6 @@ public class GPUImagePager implements View.OnTouchListener {
     }
 
     private void scrollTo(int scrollX) {
-        //computeScroll ing from 7558 to 7559
-        //setScroll 1 dragToLeft true
-        //computeScroll ing from 7559 to 7560
-        //setScroll 1080 dragToLeft false
         mScrollX = scrollX;
         boolean dragToLeft = scrollX - mCurrentItemOffsetPixel < 0;
         if (dragToLeft) {
@@ -570,19 +503,14 @@ public class GPUImagePager implements View.OnTouchListener {
         }
 
         mScrollState = newState;
-//        if (mPageTransformer != null) {
-//            // PageTransformers can do complex things that benefit from hardware layers.
-//            enableLayers(newState != SCROLL_STATE_IDLE);
-//        }
-//        dispatchOnScrollStateChanged(newState);
     }
 
-    private void populate()  {
+    private void populate() {
         populate(mCurItem);
     }
 
     private void populate(int newCurItem) {
-        if (newCurItem < 0 || newCurItem >= mItems.size()){
+        if (newCurItem < 0 || newCurItem >= mItems.size()) {
             if (DEBUG) Log.i(TAG, "populate use a wrong position");
             return;
         }
@@ -591,62 +519,33 @@ public class GPUImagePager implements View.OnTouchListener {
             if (DEBUG) Log.i(TAG, "populate is pending, skipping for now...");
             return;
         }
-//        if (mGlSurfaceView.getWindowToken() == null) {
-//            return;
-//        }
 
-        ItemInfo curItem = mItems.get(mCurItem);
+        Filter curItem = mItems.get(mCurItem);
         if (curItem != null) {
             if (DEBUG) Log.d(TAG, "populate " + mCurItem);
-            mCurrentItemOffsetPixel = curItem.offset * getClientWidth();
+            mCurrentItemOffsetPixel = mCurItem * getClientWidth();
 
             Filter left = null;
-            Filter cur = mItems.get(mCurItem).filter;
+            Filter cur = mItems.get(mCurItem);
             Filter right = null;
             int leftIndex = mCurItem - 1;
             int rightIndex = mCurItem + 1;
 
-            if (leftIndex >= 0){
-                left = mItems.get(leftIndex).filter;
+            if (leftIndex >= 0) {
+                left = mItems.get(leftIndex);
             }
             if (rightIndex < mItems.size()) {
-                right = mItems.get(rightIndex).filter;
+                right = mItems.get(rightIndex);
             }
             if (DEBUG) Log.d(TAG, "left (" + leftIndex + " " + (left != null) + ")"
                     + "cur (" + mCurItem + " " + (cur != null) + ")"
-                    + "right (" + rightIndex + " " + (right != null) + ")" );
+                    + "right (" + rightIndex + " " + (right != null) + ")");
             mRenderer.setFilter(left, cur, right);
-//            if (left != null){//借用左侧和中部显示
-//                mScrollX = (int) mCurrentItemOffsetPixel;
-//                mRenderer.setScrollX(0, true);
-//            } else if (right != null) {//借用右侧和中部显示
-//                mScrollX = (int) mCurrentItemOffsetPixel + getClientWidth();
-//                mRenderer.setScrollX(getClientWidth(), false);
-//            } else {
-//                if (DEBUG) Log.e(TAG, "error，left and right null");
-//            }
         }
     }
 
-    private int getPaddingLeft(){
-        return mGlSurfaceView.getPaddingLeft();
-    }
-
-    private int getPaddingRight() {
-        return mGlSurfaceView.getPaddingRight();
-    }
-
     private int getClientWidth() {
-        return mGlSurfaceView.getMeasuredWidth() - getPaddingLeft()
-                - mGlSurfaceView.getPaddingRight();
-    }
-
-    private static class ItemInfo {
-        Filter filter;
-        int position;
-        boolean scrolling;
-        float widthFactor;
-        float offset;
+        return mGlSurfaceView.getMeasuredWidth() - mGlSurfaceView.getPaddingLeft() - mGlSurfaceView.getPaddingRight();
     }
 
     //--------------------vp-------------------
@@ -702,7 +601,6 @@ public class GPUImagePager implements View.OnTouchListener {
         }
     }
 
-
     private class LoadImageUriTask extends LoadImageTask {
 
         private final Uri mUri;
@@ -731,7 +629,7 @@ public class GPUImagePager implements View.OnTouchListener {
         @Override
         protected int getImageOrientation() throws IOException {
             Cursor cursor = mContext.getContentResolver().query(mUri,
-                    new String[] { MediaStore.Images.ImageColumns.ORIENTATION }, null, null, null);
+                    new String[]{MediaStore.Images.ImageColumns.ORIENTATION}, null, null, null);
 
             if (cursor == null || cursor.getCount() != 1) {
                 return 0;

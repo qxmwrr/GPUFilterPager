@@ -50,6 +50,8 @@ public class GPUImageRenderer implements GLSurfaceView.Renderer, Camera.PreviewC
     private final FloatBuffer mGLLeftFlipTextureBuffer;
     private final FloatBuffer mGLRightFlipTextureBuffer;
 
+    private int[] mFrameBuffers;
+    private int[] mFrameBufferTextures;
 
     private int mOutputWidth;
     private int mOutputHeight;
@@ -115,55 +117,25 @@ public class GPUImageRenderer implements GLSurfaceView.Renderer, Camera.PreviewC
     public void onSurfaceCreated(GL10 gl, EGLConfig config) {
         GLES20.glClearColor(mBackgroundRed, mBackgroundGreen, mBackgroundBlue, 1);
         GLES20.glDisable(GLES20.GL_DEPTH_TEST);
-        mFilter.init();
-        if (mLeftFilter != null) {
-            mLeftFilter.init();
-        }
-        if (mCurFilter != null) {
-            mCurFilter.init();
-        }
-        if (mRightFilter != null) {
-            mRightFilter.init();
-        }
-    }
 
-    private int[] mFrameBuffers;
-    private int[] mFrameBufferTextures;
+        filterInit(mFilter);
+        filterInit(mLeftFilter);
+        filterInit(mCurFilter);
+        filterInit(mRightFilter);
+    }
 
     @Override
     public void onSurfaceChanged(GL10 gl, int width, int height) {
+        filterOutputSizeChanged(mFilter, width, height);
+        filterOutputSizeChanged(mLeftFilter, width, height);
+        filterOutputSizeChanged(mCurFilter, width, height);
+        filterOutputSizeChanged(mRightFilter, width, height);
+        GLES20.glViewport(0, 0, width, height);
         mOutputWidth = width;
         mOutputHeight = height;
 
-//        if (mFrameBuffers != null) {
-//
-//        }
-        mFilter.onOutputSizeChanged(width, height);
-        GLES20.glViewport(0, 0, width, height);
+        createEmptyFBO(width, height);
         adjustImageScaling();
-
-        mFrameBuffers = new int[1];
-        mFrameBufferTextures = new int[1];
-        GLES20.glGenFramebuffers(1, mFrameBuffers, 0);
-        GLES20.glGenTextures(1, mFrameBufferTextures, 0);
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mFrameBufferTextures[0]);
-        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_RGBA, width, height, 0,
-                GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, null);
-        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D,
-                GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
-        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D,
-                GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
-        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D,
-                GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
-        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D,
-                GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
-
-        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, mFrameBuffers[0]);
-        GLES20.glFramebufferTexture2D(GLES20.GL_FRAMEBUFFER, GLES20.GL_COLOR_ATTACHMENT0,
-                GLES20.GL_TEXTURE_2D, mFrameBufferTextures[0], 0);
-
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
-        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
 
         synchronized (mSurfaceChangedWaiter) {
             mSurfaceChangedWaiter.notifyAll();
@@ -239,27 +211,15 @@ public class GPUImageRenderer implements GLSurfaceView.Renderer, Camera.PreviewC
                 mLeftFilter = leftFilter;
                 mCurFilter = curFilter;
                 mRightFilter = rightFilter;
-                if (oldLeftFilter != null) {
-                    oldLeftFilter.destroy();
-                }
-                if (oldCurFilter != null) {
-                    oldCurFilter.destroy();
-                }
-                if (oldRightFilter != null) {
-                    oldRightFilter.destroy();
-                }
-                if (mLeftFilter != null) {
-                    mLeftFilter.init();
-                    mLeftFilter.onOutputSizeChanged(mOutputWidth, mOutputHeight);
-                }
-                if (mCurFilter != null) {
-                    mCurFilter.init();
-                    mCurFilter.onOutputSizeChanged(mOutputWidth, mOutputHeight);
-                }
-                if (mRightFilter != null) {
-                    mRightFilter.init();
-                    mRightFilter.onOutputSizeChanged(mOutputWidth, mOutputHeight);
-                }
+                filterDestroy(oldLeftFilter);
+                filterDestroy(oldCurFilter);
+                filterDestroy(oldRightFilter);
+                filterInit(mLeftFilter);
+                filterInit(mCurFilter);
+                filterInit(mRightFilter);
+                filterOutputSizeChanged(mLeftFilter, mOutputWidth, mOutputHeight);
+                filterOutputSizeChanged(mCurFilter, mOutputWidth, mOutputHeight);
+                filterOutputSizeChanged(mRightFilter, mOutputWidth, mOutputHeight);
             }
         });
     }
@@ -302,6 +262,45 @@ public class GPUImageRenderer implements GLSurfaceView.Renderer, Camera.PreviewC
                 adjustImageScaling();
             }
         });
+    }
+
+    private void filterInit(Filter filter) {
+        if (filter != null) { filter.init(); }
+    }
+
+    private void filterOutputSizeChanged(Filter filter, int width, int height) {
+        if (filter != null) { filter.onOutputSizeChanged(width, height);}
+    }
+
+    private void filterDestroy(Filter filter) {
+        if (filter != null) {
+            filter.destroy();
+        }
+    }
+
+    private void createEmptyFBO(int width, int height) {
+        mFrameBuffers = new int[1];
+        mFrameBufferTextures = new int[1];
+        GLES20.glGenFramebuffers(1, mFrameBuffers, 0);
+        GLES20.glGenTextures(1, mFrameBufferTextures, 0);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mFrameBufferTextures[0]);
+        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_RGBA, width, height, 0,
+                GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, null);
+        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D,
+                GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
+        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D,
+                GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
+        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D,
+                GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
+        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D,
+                GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
+
+        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, mFrameBuffers[0]);
+        GLES20.glFramebufferTexture2D(GLES20.GL_FRAMEBUFFER, GLES20.GL_COLOR_ATTACHMENT0,
+                GLES20.GL_TEXTURE_2D, mFrameBufferTextures[0], 0);
+
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
+        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
     }
 
     private void adjustImageScaling() {

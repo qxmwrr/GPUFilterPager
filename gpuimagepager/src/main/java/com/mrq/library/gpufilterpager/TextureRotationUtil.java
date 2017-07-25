@@ -1,7 +1,7 @@
 package com.mrq.library.gpufilterpager;
 
 /**
- *
+ *  纹理坐标帮助类
  * Created by mrq on 2017/6/20.
  */
 
