@@ -346,6 +346,7 @@ public class GPUImagePager implements View.OnTouchListener {
 //            completeScroll(false);
             populate();
             setScrollState(SCROLL_STATE_IDLE);
+            mPopulatePending = false;
             return;
         }
 
