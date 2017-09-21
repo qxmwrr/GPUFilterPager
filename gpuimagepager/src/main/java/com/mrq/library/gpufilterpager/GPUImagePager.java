@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ *
  * Created by mrq on 2017/6/9.
  */
 
@@ -154,7 +155,6 @@ public class GPUImagePager implements View.OnTouchListener {
 
     //--------------------vp-------------------
 
-
     private boolean mPopulatePending;
 
     private Scroller mScroller;
@@ -184,10 +184,13 @@ public class GPUImagePager implements View.OnTouchListener {
     private int mMaximumVelocity;
     private int mFlingDistance;
 
+    private int mVirtualScrollX = 0;
+
     public static final int SCROLL_STATE_IDLE = 0;
     public static final int SCROLL_STATE_DRAGGING = 1;
     public static final int SCROLL_STATE_SETTLING = 2;
     private int mScrollState = SCROLL_STATE_IDLE;
+
     private final Runnable mEndScrollRunnable = new Runnable() {
         public void run() {
             setScrollState(SCROLL_STATE_IDLE);
@@ -269,7 +272,7 @@ public class GPUImagePager implements View.OnTouchListener {
                     int initialVelocity = (int) velocityTracker.getXVelocity(mActivePointerId);
                     mPopulatePending = true;
                     final int width = getClientWidth();
-                    final int scrollX = getScrollX();
+                    final int scrollX = getVirtualScrollX();
 
                     final int position = infoForCurrentScrollPosition();
                     if (position != -1) {
@@ -320,7 +323,7 @@ public class GPUImagePager implements View.OnTouchListener {
             sx = mIsScrollStarted ? mScroller.getCurrX() : mScroller.getStartX();
             mScroller.abortAnimation();
         } else {
-            sx = getScrollX();
+            sx = getVirtualScrollX();
         }
         int dx = x - sx;//滑动目的位置-当前位置
         if (dx == 0) {
@@ -366,7 +369,7 @@ public class GPUImagePager implements View.OnTouchListener {
     private void computeScroll() {
         mIsScrollStarted = true;
         if (!mScroller.isFinished() && mScroller.computeScrollOffset()) {
-            int oldX = getScrollX();
+            int oldX = getVirtualScrollX();
             int x = mScroller.getCurrX();
 
             if (oldX != x) {
@@ -395,7 +398,7 @@ public class GPUImagePager implements View.OnTouchListener {
             boolean wasScrolling = !mScroller.isFinished();
             if (wasScrolling) {
                 mScroller.abortAnimation();
-                int oldX = getScrollX();
+                int oldX = getVirtualScrollX();
                 int x = mScroller.getCurrX();
                 if (DEBUG)
                     Log.i(TAG, "scroll finish but scroller wasScrolling form " + oldX + " to " + x);
@@ -439,8 +442,8 @@ public class GPUImagePager implements View.OnTouchListener {
 
     private int infoForCurrentScrollPosition() {
         final int width = getClientWidth();
-        final float scrollOffset = width > 0 ? (float) getScrollX() / width : 0;
-        int position = (int) scrollOffset;
+        final float scrollOffset = width > 0 ? (float) getVirtualScrollX() / width : 0;
+        int position = (int) (scrollOffset + 0.5);
         if (position >= 0 && position < mItems.size()) {
             return position;
         }
@@ -465,7 +468,7 @@ public class GPUImagePager implements View.OnTouchListener {
         final float deltaX = mLastMotionX - x;
         mLastMotionX = x;
 
-        float oldScrollX = getScrollX();
+        float oldScrollX = getVirtualScrollX();
         float scrollX = oldScrollX + deltaX;
         final int width = getClientWidth();
 
@@ -480,14 +483,13 @@ public class GPUImagePager implements View.OnTouchListener {
         mLastMotionX += scrollX - (int) scrollX;
     }
 
-    private int mScrollX = 0;
 
-    private int getScrollX() {
-        return mScrollX;
+    private int getVirtualScrollX() {
+        return mVirtualScrollX;
     }
 
     private void scrollTo(int scrollX) {
-        mScrollX = scrollX;
+        mVirtualScrollX = scrollX;
         boolean dragToLeft = scrollX - mCurrentItemOffsetPixel < 0;
         if (dragToLeft) {
             mRenderer.setScrollX((int) (mCurrentItemOffsetPixel - scrollX), true);
