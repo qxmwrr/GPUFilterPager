@@ -6,10 +6,17 @@
     android:layout_height="match_parent"
     tools:context="com.mrq.gpufilterpager.MainActivity">
 
-    <android.opengl.GLSurfaceView
-        android:id="@+id/gl_surface_view"
+    <com.mrq.library.gpufilterpager.GPUImagePager
+        android:id="@+id/gpu_image_pager"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent">
+
+        <android.opengl.GLSurfaceView
+            android:id="@+id/gl_surface_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+    </com.mrq.library.gpufilterpager.GPUImagePager>
 
     <Button
         android:layout_width="wrap_content"

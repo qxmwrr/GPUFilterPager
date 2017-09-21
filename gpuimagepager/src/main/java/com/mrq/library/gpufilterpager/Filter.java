@@ -33,4 +33,6 @@ public interface Filter {
      * 解除无用资源
      */
     void destroy();
+
+    String toString();
 }

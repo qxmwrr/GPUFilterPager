@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.graphics.BitmapFactory;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 
 import com.mrq.library.gpufilterpager.DefaultFilterFactory;
@@ -31,7 +32,8 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
 
         GLSurfaceView glSurfaceView = (GLSurfaceView) findViewById(R.id.gl_surface_view);
-        final GPUImagePager gpuImagePager = new GPUImagePager(glSurfaceView, new DefaultFilterFactory() {
+        final GPUImagePager gpuImagePager = (GPUImagePager) findViewById(R.id.gpu_image_pager);
+        gpuImagePager.init(glSurfaceView, new DefaultFilterFactory() {
             @Override
             public Filter create() {
                 return new FilterWrapper(new GPUImageFilter());
@@ -94,7 +96,7 @@ public class MainActivity extends Activity {
 
         GPUImageFilter filter;
 
-        public FilterWrapper(GPUImageFilter filter) {
+        FilterWrapper(GPUImageFilter filter) {
             this.filter = filter;
         }
 
@@ -116,6 +118,11 @@ public class MainActivity extends Activity {
         @Override
         public void destroy() {
             filter.destroy();
+        }
+
+        @Override
+        public String toString() {
+            return filter.getClass().getSimpleName();
         }
     }
 }

@@ -194,34 +194,48 @@ public class GPUImageRenderer implements GLSurfaceView.Renderer, Camera.PreviewC
         //TODO 相机
     }
 
-    public void setScrollX(int scrollX, boolean dragToLeft) {
-        if (DEBUG) Log.v(TAG, "setScroll " + scrollX + " dragToLeft " + dragToLeft);
-        this.mScrollX = scrollX;
-        this.mDragToLeft = dragToLeft;
-        adjustImageScaling();
-    }
-
-    public void setFilter(final Filter leftFilter, final Filter curFilter, final Filter rightFilter) {
+    public void setScrollX(final Filter targetFilter, final int scrollX, final boolean dragToLeft) {
         runOnDraw(new Runnable() {
             @Override
             public void run() {
-                final Filter oldLeftFilter = mLeftFilter;
-                final Filter oldCurFilter = mCurFilter;
-                final Filter oldRightFilter = mRightFilter;
-                mLeftFilter = leftFilter;
-                mCurFilter = curFilter;
-                mRightFilter = rightFilter;
-                filterDestroy(oldLeftFilter);
-                filterDestroy(oldCurFilter);
-                filterDestroy(oldRightFilter);
-                filterInit(mLeftFilter);
-                filterInit(mCurFilter);
-                filterInit(mRightFilter);
-                filterOutputSizeChanged(mLeftFilter, mOutputWidth, mOutputHeight);
-                filterOutputSizeChanged(mCurFilter, mOutputWidth, mOutputHeight);
-                filterOutputSizeChanged(mRightFilter, mOutputWidth, mOutputHeight);
+                if (mCurFilter != targetFilter){
+                    if (DEBUG) Log.v(TAG, "setScroll abandoned");
+                    return;
+                }
+                if (DEBUG) Log.v(TAG, "setScroll " + scrollX + " dragToLeft " + dragToLeft);
+                GPUImageRenderer.this.mScrollX = scrollX;
+                GPUImageRenderer.this.mDragToLeft = dragToLeft;
+                adjustImageScaling();
             }
         });
+    }
+
+    public void setFilter(final Filter leftFilter, final Filter curFilter, final Filter rightFilter) {
+        if (leftFilter != mLeftFilter  || curFilter != mCurFilter || rightFilter != mRightFilter){
+            runOnDraw(new Runnable() {
+                @Override
+                public void run() {
+                    final Filter oldLeftFilter = mLeftFilter;
+                    final Filter oldCurFilter = mCurFilter;
+                    final Filter oldRightFilter = mRightFilter;
+                    mLeftFilter = leftFilter;
+                    mCurFilter = curFilter;
+                    mRightFilter = rightFilter;
+                    filterDestroy(oldLeftFilter);
+                    filterDestroy(oldCurFilter);
+                    filterDestroy(oldRightFilter);
+                    filterInit(mLeftFilter);
+                    filterInit(mCurFilter);
+                    filterInit(mRightFilter);
+                    filterOutputSizeChanged(mLeftFilter, mOutputWidth, mOutputHeight);
+                    filterOutputSizeChanged(mCurFilter, mOutputWidth, mOutputHeight);
+                    filterOutputSizeChanged(mRightFilter, mOutputWidth, mOutputHeight);
+                    if (DEBUG) Log.d(TAG, (mLeftFilter != null ? mLeftFilter.toString() : "null") + " - " +
+                            (mCurFilter != null ? mCurFilter.toString() : "null") + " - " +
+                            (mRightFilter != null ? mRightFilter.toString() : "null"));
+                }
+            });
+        }
     }
 
     public void deleteImage() {
@@ -323,19 +337,20 @@ public class GPUImageRenderer implements GLSurfaceView.Renderer, Camera.PreviewC
         float ratioWidth = imageWidthNew / outputWidth;
         float ratioHeight = imageHeightNew / outputHeight;
 
-        float[] cube = CUBE;
-        float[] textureCords = TextureRotationUtil.getRotation(mRotation, mFlipHorizontal, mFlipVertical);
+        float[] scaleCube = CUBE;
+        float[] scaleTextureCords = TextureRotationUtil.getRotation(mRotation, mFlipHorizontal, mFlipVertical);
+        //处理缩放
         if (mScaleType == ScaleType.CENTER_CROP) {
             float distHorizontal = (1 - 1 / ratioWidth) / 2;
             float distVertical = (1 - 1 / ratioHeight) / 2;
-            textureCords = new float[]{
-                    addDistance(textureCords[0], distHorizontal), addDistance(textureCords[1], distVertical),
-                    addDistance(textureCords[2], distHorizontal), addDistance(textureCords[3], distVertical),
-                    addDistance(textureCords[4], distHorizontal), addDistance(textureCords[5], distVertical),
-                    addDistance(textureCords[6], distHorizontal), addDistance(textureCords[7], distVertical),
+            scaleTextureCords = new float[]{
+                    addDistance(scaleTextureCords[0], distHorizontal), addDistance(scaleTextureCords[1], distVertical),
+                    addDistance(scaleTextureCords[2], distHorizontal), addDistance(scaleTextureCords[3], distVertical),
+                    addDistance(scaleTextureCords[4], distHorizontal), addDistance(scaleTextureCords[5], distVertical),
+                    addDistance(scaleTextureCords[6], distHorizontal), addDistance(scaleTextureCords[7], distVertical),
             };
         } else {
-            cube = new float[]{
+            scaleCube = new float[]{
                     CUBE[0] / ratioHeight, CUBE[1] / ratioWidth,
                     CUBE[2] / ratioHeight, CUBE[3] / ratioWidth,
                     CUBE[4] / ratioHeight, CUBE[5] / ratioWidth,
@@ -345,39 +360,50 @@ public class GPUImageRenderer implements GLSurfaceView.Renderer, Camera.PreviewC
 
         float offset = mScrollX * 1.0f / mOutputWidth;
 
+        float[] leftScaleCube = adjustLeftCube(scaleCube, offset);
+        float[] rightScaleCube = adjustRightCube(scaleCube, offset);
+
+        float[] leftScaleTexture = adjustLeftTexture(scaleTextureCords, offset);
+        float[] rightScaleTexture = adjustRightTexture(scaleTextureCords, offset);
+
+        float[] textureCords = TextureRotationUtil.getRotation(mRotation, mFlipHorizontal, mFlipVertical);
+        float[] leftNormalTexture = adjustLeftTexture(textureCords, offset);
+        float[] rightNormalTexture = adjustRightTexture(textureCords, offset);
+
+        float[] leftNormalCube = adjustLeftCube(CUBE, offset);
+        float[] rightNormalCube = adjustRightCube(CUBE, offset);
+        float[] leftFlipTexture = {
+                leftNormalTexture[0], flip(leftNormalTexture[1]),
+                leftNormalTexture[2], flip(leftNormalTexture[3]),
+                leftNormalTexture[4], flip(leftNormalTexture[5]),
+                leftNormalTexture[6], flip(leftNormalTexture[7]),
+        };
+        float[] rightFlipTexture = {
+                rightNormalTexture[0], flip(rightNormalTexture[1]),
+                rightNormalTexture[2], flip(rightNormalTexture[3]),
+                rightNormalTexture[4], flip(rightNormalTexture[5]),
+                rightNormalTexture[6], flip(rightNormalTexture[7]),
+        };
+
         mGLLeftCubeBuffer.clear();
-        float[] leftCube = adjustLeftCube(cube, offset);
-        mGLLeftCubeBuffer.put(leftCube).position(0);
         mGLLeftTextureBuffer.clear();
-
-        float[] leftTexture = adjustLeftTexture(textureCords, offset);
-        mGLLeftTextureBuffer.put(leftTexture).position(0);
-
         mGLRightCubeBuffer.clear();
-        mGLRightCubeBuffer.put(adjustRightCube(cube, offset)).position(0);
         mGLRightTextureBuffer.clear();
-        float[] rightTexture = adjustRightTexture(textureCords, offset);
-        mGLRightTextureBuffer.put(rightTexture).position(0);
 
+        mGLLeftCubeBuffer.put(leftScaleCube).position(0);
+        mGLLeftTextureBuffer.put(leftScaleTexture).position(0);
+        mGLRightCubeBuffer.put(rightScaleCube).position(0);
+        mGLRightTextureBuffer.put(rightScaleTexture).position(0);
 
-        textureCords = TextureRotationUtil.getRotation(mRotation, mFlipHorizontal, mFlipVertical);
-        leftTexture = adjustLeftTexture(textureCords, offset);
-        rightTexture = adjustRightTexture(textureCords, offset);
-        mGLLeftNormalCubeBuffer.put(adjustLeftCube(CUBE, offset)).position(0);
-        mGLRightNormalCubeBuffer.put(adjustRightCube(CUBE, offset)).position(0);
-        mGLLeftFlipTextureBuffer.put(new float[] {
-                leftTexture[0], flip(leftTexture[1]),
-                leftTexture[2], flip(leftTexture[3]),
-                leftTexture[4], flip(leftTexture[5]),
-                leftTexture[6], flip(leftTexture[7]),
-        }).position(0);
-        mGLRightFlipTextureBuffer.put(new float[] {
-                rightTexture[0], flip(rightTexture[1]),
-                rightTexture[2], flip(rightTexture[3]),
-                rightTexture[4], flip(rightTexture[5]),
-                rightTexture[6], flip(rightTexture[7]),
-        }).position(0);
+        mGLLeftNormalCubeBuffer.clear();
+        mGLRightNormalCubeBuffer.clear();
+        mGLLeftFlipTextureBuffer.clear();
+        mGLRightFlipTextureBuffer.clear();
 
+        mGLLeftNormalCubeBuffer.put(leftNormalCube).position(0);
+        mGLRightNormalCubeBuffer.put(rightNormalCube).position(0);
+        mGLLeftFlipTextureBuffer.put(leftFlipTexture).position(0);
+        mGLRightFlipTextureBuffer.put(rightFlipTexture).position(0);
     }
 
     private static float flip(final float i) {
