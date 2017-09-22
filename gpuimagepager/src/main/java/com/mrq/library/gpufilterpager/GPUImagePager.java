@@ -25,6 +25,7 @@ import android.view.WindowManager;
 import android.view.animation.Interpolator;
 import android.widget.FrameLayout;
 import android.widget.Scroller;
+import android.widget.TextView;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -65,12 +66,7 @@ public class GPUImagePager extends FrameLayout {
     public GPUImagePager(Context context, AttributeSet attrs) {
         super(context, attrs);
         this.mContext = context;
-    }
 
-    public void init(final GLSurfaceView glSurfaceView, DefaultFilterFactory filterFactory) {
-        if (!supportsOpenGLES2(glSurfaceView.getContext())) {
-            throw new IllegalStateException("OpenGL ES 2.0 is not supported on this phone.");
-        }
         float density = mContext.getResources().getDisplayMetrics().density;
         ViewConfiguration configuration = ViewConfiguration.get(mContext);
         mTouchSlop = configuration.getScaledTouchSlop();
@@ -81,19 +77,30 @@ public class GPUImagePager extends FrameLayout {
         mDefaultGutterSize = (int) (DEFAULT_GUTTER_SIZE * density);
 
         mScroller = new Scroller(mContext, sInterpolator);
+        mGlSurfaceView = new GLSurfaceView(mContext);
+        addView(mGlSurfaceView, 0, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT
+                , ViewGroup.LayoutParams.MATCH_PARENT));
 
-        mRenderer = new GPUImageRenderer(filterFactory);
-        setGLSurfaceView(glSurfaceView);
-//        glSurfaceView.setOnTouchListener(this);
-        glSurfaceView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
-            @Override
-            public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
-                if (mFirstLayout) {
-                    mFirstLayout = false;
-                    scrollTo(0);
-                }
+        if (!isInEditMode()){
+            if (!supportsOpenGLES2(mContext)) {
+                throw new IllegalStateException("OpenGL ES 2.0 is not supported on this phone.");
             }
-        });
+
+            addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+                @Override
+                public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
+                    if (mFirstLayout) {
+                        mFirstLayout = false;
+                        scrollTo(0);
+                    }
+                }
+            });
+        }
+    }
+
+    public void init(DefaultFilterFactory filterFactory) {
+        mRenderer = new GPUImageRenderer(filterFactory);
+        setGLSurfaceView(mGlSurfaceView);
     }
 
     public void setCurrentItem(int item) {

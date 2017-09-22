@@ -31,9 +31,8 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        GLSurfaceView glSurfaceView = (GLSurfaceView) findViewById(R.id.gl_surface_view);
         final GPUImagePager gpuImagePager = (GPUImagePager) findViewById(R.id.gpu_image_pager);
-        gpuImagePager.init(glSurfaceView, new DefaultFilterFactory() {
+        gpuImagePager.init(new DefaultFilterFactory() {
             @Override
             public Filter create() {
                 return new FilterWrapper(new GPUImageFilter());
