@@ -20,8 +20,8 @@ android {
 
 dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
-    compile project(':gpuimagepager')
-//    compile 'com.mrq.library:gpuimagepager:0.3'
+//    compile project(':gpuimagepager')
+    compile 'com.mrq.library:gpuimagepager:1.0'
     compile 'jp.co.cyberagent.android.gpuimage:gpuimage-library:1.4.1'
 
 }
