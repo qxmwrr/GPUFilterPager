@@ -2,6 +2,7 @@ package com.mrq.gpufilterpager;
 
 import android.app.Activity;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
 import android.util.Log;
@@ -48,6 +49,7 @@ public class MainActivity extends Activity {
         filters.add(new FilterWrapper(new GPUImageContrastFilter(40)));
         gpuImagePager.setScaleType(ScaleType.CENTER_CROP);
         gpuImagePager.setFilterList(filters);
+//        gpuImagePager.setImage(Uri.parse("https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1508232074957&di=b2fcbaebd6c592aaa13e96ca351a0838&imgtype=0&src=http%3A%2F%2Ff2.dn.anqu.com%2Fdown%2FMGYwNQ%3D%3D%2Fallimg%2F1308%2F54-130R1093120.jpg"));
         try {
             gpuImagePager.setImage(BitmapFactory.decodeStream(getAssets().open("img.jpg")));
         } catch (IOException e) {

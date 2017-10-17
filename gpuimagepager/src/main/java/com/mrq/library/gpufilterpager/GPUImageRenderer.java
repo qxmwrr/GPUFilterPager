@@ -3,7 +3,6 @@ package com.mrq.library.gpufilterpager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.SurfaceTexture;
-import android.hardware.Camera;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.util.Log;
@@ -24,12 +23,12 @@ import static com.mrq.library.gpufilterpager.TextureRotationUtil.TEXTURE_NO_ROTA
  * Created by mrq on 2017/6/13.
  */
 
-public class GPUImageRenderer implements GLSurfaceView.Renderer, Camera.PreviewCallback {
+class GPUImageRenderer implements GLSurfaceView.Renderer{
     private static final String TAG = "GPUImagePager";
     private static final boolean DEBUG = true;
-    public static final int NO_IMAGE = OpenGlUtils.NO_TEXTURE;
+    private static final int NO_IMAGE = OpenGlUtils.NO_TEXTURE;
 
-    public final Object mSurfaceChangedWaiter = new Object();
+    final Object mSurfaceChangedWaiter = new Object();
 
     private Filter mFilter;
     private Filter mLeftFilter;
@@ -71,14 +70,14 @@ public class GPUImageRenderer implements GLSurfaceView.Renderer, Camera.PreviewC
 
     private int mScrollX = 0;
 
-    public GPUImageRenderer(DefaultFilterFactory filterFactory) {
+    GPUImageRenderer(DefaultFilterFactory filterFactory) {
         mFilter = filterFactory.create();
         mLeftFilter = filterFactory.create();
         mCurFilter = filterFactory.create();
         mRightFilter = filterFactory.create();
 
-        mRunOnDraw = new LinkedList<Runnable>();
-        mRunOnDrawEnd = new LinkedList<Runnable>();
+        mRunOnDraw = new LinkedList<>();
+        mRunOnDrawEnd = new LinkedList<>();
 
         mGLLeftCubeBuffer = ByteBuffer.allocateDirect(CUBE.length * 4)
                 .order(ByteOrder.nativeOrder())
@@ -189,12 +188,7 @@ public class GPUImageRenderer implements GLSurfaceView.Renderer, Camera.PreviewC
         }
     }
 
-    @Override
-    public void onPreviewFrame(byte[] data, Camera camera) {
-        //TODO 相机
-    }
-
-    public void setScrollX(final Filter targetFilter, final int scrollX, final boolean dragToLeft) {
+    void setScrollX(final Filter targetFilter, final int scrollX, final boolean dragToLeft) {
         runOnDraw(new Runnable() {
             @Override
             public void run() {
@@ -210,7 +204,7 @@ public class GPUImageRenderer implements GLSurfaceView.Renderer, Camera.PreviewC
         });
     }
 
-    public void setFilter(final Filter leftFilter, final Filter curFilter, final Filter rightFilter) {
+    void setFilter(final Filter leftFilter, final Filter curFilter, final Filter rightFilter) {
         if (leftFilter != mLeftFilter  || curFilter != mCurFilter || rightFilter != mRightFilter){
             runOnDraw(new Runnable() {
                 @Override
@@ -238,7 +232,7 @@ public class GPUImageRenderer implements GLSurfaceView.Renderer, Camera.PreviewC
         }
     }
 
-    public void deleteImage() {
+    void deleteImage() {
         runOnDraw(new Runnable() {
 
             @Override
@@ -249,7 +243,7 @@ public class GPUImageRenderer implements GLSurfaceView.Renderer, Camera.PreviewC
         });
     }
 
-    public void setImageBitmap(final Bitmap bitmap, final boolean recycle) {
+    void setImageBitmap(final Bitmap bitmap, final boolean recycle) {
         if (bitmap == null) {
             return;
         }
@@ -473,7 +467,7 @@ public class GPUImageRenderer implements GLSurfaceView.Renderer, Camera.PreviewC
         return coordinate == 0.0f ? distance : 1 - distance;
     }
 
-    public void setScaleType(ScaleType scaleType) {
+    void setScaleType(ScaleType scaleType) {
         mScaleType = scaleType;
     }
 
@@ -484,29 +478,29 @@ public class GPUImageRenderer implements GLSurfaceView.Renderer, Camera.PreviewC
      * @param green green color value
      * @param blue red color value
      */
-    public void setBackgroundColor(float red, float green, float blue) {
+    void setBackgroundColor(float red, float green, float blue) {
         mBackgroundRed = red;
         mBackgroundGreen = green;
         mBackgroundBlue = blue;
     }
 
-    public void setRotation(final Rotation rotation) {
+    private void setRotation(final Rotation rotation) {
         mRotation = rotation;
         adjustImageScaling();
     }
 
-    public void setRotation(final Rotation rotation,
-                            final boolean flipHorizontal, final boolean flipVertical) {
+    private void setRotation(final Rotation rotation,
+                             final boolean flipHorizontal, final boolean flipVertical) {
         mFlipHorizontal = flipHorizontal;
         mFlipVertical = flipVertical;
         setRotation(rotation);
     }
 
-    protected int getFrameWidth() {
+    int getFrameWidth() {
         return mOutputWidth;
     }
 
-    protected int getFrameHeight() {
+    int getFrameHeight() {
         return mOutputHeight;
     }
 
@@ -567,7 +561,7 @@ public class GPUImageRenderer implements GLSurfaceView.Renderer, Camera.PreviewC
         }
     }
 
-    protected void runOnDraw(final Runnable runnable) {
+    private void runOnDraw(final Runnable runnable) {
         synchronized (mRunOnDraw) {
             mRunOnDraw.add(runnable);
         }
@@ -579,7 +573,7 @@ public class GPUImageRenderer implements GLSurfaceView.Renderer, Camera.PreviewC
         }
     }
 
-    static final float CUBE[] = {
+    private static final float CUBE[] = {
             -1.0f, -1.0f,       //左下
             1.0f, -1.0f,        //右下
             -1.0f, 1.0f,        //左上
